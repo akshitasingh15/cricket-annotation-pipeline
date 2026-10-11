@@ -80,13 +80,15 @@ Click a row to edit it; the timeline shows every event (wickets red, boundaries 
 |---|---|
 | Clips / total duration | 5 clips/ 39s total |
 | Events annotated | 9 |
-| Event-detection F1 vs second annotator | _from `reports/agreement_report.md`_ |
-| Time-bin Cohen's kappa | _from `reports/agreement_report.md`_ |
-| Delivery boundaries matched by auto cuts | _from `reports/auto_vs_manual.md`_ |
+| Event-detection F1 vs second annotator | Not measured (single annotator) |
+| Time-bin Cohen's kappa | Not measured (single annotator) |
+| Delivery boundaries matched by auto cuts |0/6 (clips are single-shot, so scene detection finds no cuts) |
 
 ![event counts](reports/event_counts.png)
 
 ## Known limitations
 
-Write these honestly after your run: small sample, camera-angle bias, class imbalance, agreement measured on N clips only,
-stock footage not representative of match play.
+1. Small sample (5 clips, about 40 seconds), mostly stock footage.
+2. Single annotator, so inter-annotator agreement has not been measured. The agreement tooling (scripts/agreement.py) is included and tested for use with a second annotator.
+3. Most clips are single continuous shots, so automatic scene detection finds no delivery boundaries.
+4. No wickets in the current data, so dismissal types are untested.
