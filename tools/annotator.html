@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cricket Annotator</title>
+<style>
+  :root { --bg:#f6f5f1; --panel:#fff; --ink:#1d2320; --muted:#68726c; --line:#dcdad2; --accent:#2f6f4e; --warn:#b3412c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161a18; --panel:#1f2522; --ink:#e8ebe9; --muted:#97a39c; --line:#33403a; --accent:#5db386; --warn:#ef8a74; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:var(--panel); }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  main { display:grid; grid-template-columns: minmax(0,1.6fr) minmax(320px,1fr); gap:16px; padding:16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; }
+  video { width:100%; max-height:62vh; background:#000; border-radius:6px; display:block; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  button, select, input, textarea { font:inherit; color:inherit; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 9px; }
+  button { cursor:pointer; } button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  label { display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--muted); }
+  label select, label input, label textarea { color:var(--ink); }
+  .time { font-variant-numeric: tabular-nums; font-size:18px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); }
+  tr.sel { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  tr[data-i] { cursor:pointer; }
+  .timeline { position:relative; height:26px; background:var(--bg); border:1px solid var(--line); border-radius:6px; margin-top:8px; overflow:hidden; }
+  .seg { position:absolute; top:3px; height:20px; background:var(--accent); opacity:.55; border-radius:3px; }
+  .seg.t-wicket { background:#c0392b; opacity:.8 } .seg.t-boundary { background:#d68a1c; opacity:.8 }
+  .head { position:absolute; top:0; width:2px; height:100%; background:var(--ink); }
+  .keys { color:var(--muted); font-size:12px; line-height:1.8; }
+  kbd { border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; font:12px ui-monospace, monospace; background:var(--bg); }
+  #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; opacity:0; transition:opacity .2s; pointer-events:none; }
+  #toast.show { opacity:.95; } .err { color:var(--warn); }
+  .small { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cricket Annotator <span class="small">schema 1.0.0</span></h1>
+  <label>Video <input type="file" id="videoFile" accept="video/*"></label>
+  <label>Load existing JSON <input type="file" id="jsonFile" accept="application/json"></label>
+  <label>Annotator id <input id="annotator" value="main" size="10" pattern="[a-z0-9_]+"></label>
+  <label>Frame rate (for frame step) <input id="fps" type="number" value="30" min="1" max="120" style="width:80px"></label>
+  <button id="exportBtn" class="primary">Export JSON (Ctrl+S)</button>
+  <span id="clipLabel" class="small">no clip loaded</span>
+</header>
+
+<main>
+  <section>
+    <div class="panel">
+      <video id="v" controls preload="auto"></video>
+      <div class="timeline" id="timeline" title="click to seek"><div class="head" id="head"></div></div>
+      <div class="row">
+        <span class="time" id="clock">0.000 / 0.000</span>
+        <button id="playBtn">Play/Pause</button>
+        <label style="flex-direction:row;align-items:center;gap:6px">Speed
+          <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>1.5</option><option>2</option></select>
+        </label>
+        <button id="setStart">[ Set start</button>
+        <button id="setEnd">] Set end</button>
+      </div>
+      <div class="keys" style="margin-top:10px">
+        <kbd>Space</kbd> play/pause &nbsp; <kbd>←</kbd><kbd>→</kbd> ±1 s &nbsp; <kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> ±5 s &nbsp;
+        <kbd>,</kbd><kbd>.</kbd> one frame &nbsp; <kbd>[</kbd> set start &nbsp; <kbd>]</kbd> set end &nbsp;
+        <kbd>1</kbd>–<kbd>7</kbd> event type (delivery, shot, boundary, wicket, appeal, extra, fielding) &nbsp;
+        <kbd>Enter</kbd> add / update event &nbsp; <kbd>Delete</kbd> remove selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>Ctrl</kbd>+<kbd>S</kbd> export
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel">
+      <strong>Event</strong> <span class="small" id="mode">(new)</span>
+      <div class="grid">
+        <label>Type <select id="type"></select></label>
+        <label>Confidence <select id="confidence"><option>high</option><option>medium</option><option>low</option></select></label>
+        <label>Start (s) <input id="start" type="number" step="0.001" min="0"></label>
+        <label>End (s) <input id="end" type="number" step="0.001" min="0"></label>
+      </div>
+      <div class="grid" id="attrs"></div>
+      <label style="margin-top:8px">Notes <textarea id="notes" rows="2"></textarea></label>
+      <div class="row">
+        <button id="addBtn" class="primary">Add event (Enter)</button>
+        <button id="clearBtn">Clear form</button>
+        <button id="delBtn">Delete selected</button>
+      </div>
+      <div id="formErr" class="err small"></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px; max-height:46vh; overflow:auto">
+      <strong>Events</strong> <span class="small" id="count">0</span>
+      <table>
+        <thead><tr><th>#</th><th>type</th><th>start</th><th>end</th><th>label</th><th>conf</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+// Keep this in sync with schema/event_schema.json
+const SPEC = {
+  delivery: [["bowler_type", ["pace","spin","unknown"]], ["length", ["yorker","full","good","short","unknown"]], ["outcome", ["dot","runs","boundary","wicket","extra","unknown"]]],
+  shot:     [["shot_type", ["drive","cut","pull","hook","sweep","flick","glance","defence","leave","slog","other"]], ["contact", ["middled","edged","mistimed","missed","none"]]],
+  boundary: [["runs", [4, 6]]],
+  wicket:   [["dismissal", ["bowled","caught","lbw","run_out","stumped","hit_wicket","other"]]],
+  appeal:   [["result", ["out","not_out","review","unknown"]]],
+  extra:    [["extra_type", ["wide","no_ball","bye","leg_bye"]]],
+  fielding: [["action", ["catch","drop","stop","throw","misfield"]]],
+};
+const TYPES = Object.keys(SPEC);
+const MAIN_LABEL = { delivery:"outcome", shot:"shot_type", boundary:"runs", wicket:"dismissal", appeal:"result", extra:"extra_type", fielding:"action" };
+
+const $ = id => document.getElementById(id);
+const v = $("v");
+let events = [];     // {type,start_s,end_s,confidence,notes?, ...attrs}
+let sel = -1;
+let clipId = "";
+let loadedExtra = {}; // created_at / clip_notes preserved from a loaded file
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); }
+const fmt = x => (Number.isFinite(x) ? x : 0).toFixed(3);
+const slug = s => s.toLowerCase().replace(/\.[^.]+$/, "").replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+
+/* ---------- form ---------- */
+$("type").innerHTML = TYPES.map((t, i) => `<option value="${t}">${i + 1}. ${t}</option>`).join("");
+function buildAttrs(values = {}) {
+  const type = $("type").value;
+  $("attrs").innerHTML = SPEC[type].map(([name, opts]) =>
+    `<label>${name}<select data-attr="${name}"><option value="">— choose —</option>` +
+    opts.map(o => `<option value="${o}" ${String(values[name]) === String(o) ? "selected" : ""}>${o}</option>`).join("") +
+    `</select></label>`).join("");
+}
+$("type").addEventListener("change", () => buildAttrs());
+buildAttrs();
+
+function readForm() {
+  const type = $("type").value;
+  const start = parseFloat($("start").value), end = parseFloat($("end").value);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) throw new Error("Set start and end first ([ and ])");
+  if (end <= start) throw new Error("End must be after start");
+  if (Number.isFinite(v.duration) && end > v.duration + 0.05) throw new Error("End is beyond the clip duration");
+  const e = { type, start_s: +start.toFixed(3), end_s: +end.toFixed(3), confidence: $("confidence").value };
+  for (const [name, opts] of SPEC[type]) {
+    const val = document.querySelector(`[data-attr="${name}"]`).value;
+    if (val === "") throw new Error(`Choose a value for ${name}`);
+    e[name] = typeof opts[0] === "number" ? Number(val) : val;
+  }
+  const notes = $("notes").value.trim();
+  if (notes) e.notes = notes;
+  return e;
+}
+function fillForm(e) {
+  $("type").value = e.type; buildAttrs(e);
+  $("start").value = e.start_s; $("end").value = e.end_s;
+  $("confidence").value = e.confidence; $("notes").value = e.notes || "";
+}
+function clearForm() { sel = -1; $("start").value = ""; $("end").value = ""; $("notes").value = ""; buildAttrs(); $("mode").textContent = "(new)"; $("addBtn").textContent = "Add event (Enter)"; $("formErr").textContent = ""; render(); }
+
+function commit() {
+  try {
+    const e = readForm();
+    if (sel >= 0) { events[sel] = e; toast("Updated"); } else { events.push(e); toast("Added"); }
+    events.sort((a, b) => a.start_s - b.start_s || a.end_s - b.end_s);
+    $("formErr").textContent = "";
+    // keep type + times cleared for the next event but keep the type selected
+    const keepType = $("type").value;
+    clearForm(); $("type").value = keepType; buildAttrs();
+    save();
+  } catch (err) { $("formErr").textContent = err.message; toast(err.message); }
+}
+
+/* ---------- render ---------- */
+function render() {
+  $("rows").innerHTML = events.map((e, i) =>
+    `<tr data-i="${i}" class="${i === sel ? "sel" : ""}"><td>${i + 1}</td><td>${e.type}</td><td>${fmt(e.start_s)}</td><td>${fmt(e.end_s)}</td><td>${e[MAIN_LABEL[e.type]]}</td><td>${e.confidence}</td></tr>`).join("");
+  $("count").textContent = events.length;
+  const d = v.duration || 0;
+  document.querySelectorAll(".seg").forEach(n => n.remove());
+  if (d) for (const e of events) {
+    const s = document.createElement("div");
+    s.className = "seg t-" + e.type;
+    s.style.left = (e.start_s / d * 100) + "%";
+    s.style.width = Math.max(0.4, (e.end_s - e.start_s) / d * 100) + "%";
+    s.title = `${e.type} ${fmt(e.start_s)}–${fmt(e.end_s)}`;
+    $("timeline").appendChild(s);
+  }
+}
+$("rows").addEventListener("click", ev => {
+  const tr = ev.target.closest("tr[data-i]"); if (!tr) return;
+  sel = +tr.dataset.i; fillForm(events[sel]); v.currentTime = events[sel].start_s;
+  $("mode").textContent = `(editing #${sel + 1})`; $("addBtn").textContent = "Update event (Enter)"; render();
+});
+function tick() {
+  const d = v.duration || 0;
+  $("clock").textContent = `${fmt(v.currentTime)} / ${fmt(d)}`;
+  $("head").style.left = d ? (v.currentTime / d * 100) + "%" : "0%";
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+$("timeline").addEventListener("click", ev => {
+  if (!v.duration) return;
+  const r = $("timeline").getBoundingClientRect();
+  v.currentTime = (ev.clientX - r.left) / r.width * v.duration;
+});
+
+/* ---------- persistence ---------- */
+function storeKey() { return "cricket-annotator:" + clipId + ":" + $("annotator").value; }
+function save() { try { if (clipId) localStorage.setItem(storeKey(), JSON.stringify(events)); } catch (_) {} }
+function restore() { try { const s = localStorage.getItem(storeKey()); if (s && !events.length) { events = JSON.parse(s); toast("Restored autosaved events"); } } catch (_) {} }
+
+function buildDoc() {
+  const ev = events.map((e, i) => ({ id: i + 1, ...e }));
+  return {
+    schema_version: "1.0.0", clip_id: clipId, annotator: $("annotator").value.trim(),
+    created_at: loadedExtra.created_at || new Date().toISOString(),
+    ...(loadedExtra.clip_notes ? { clip_notes: loadedExtra.clip_notes } : {}),
+    events: ev,
+  };
+}
+function exportJson() {
+  if (!clipId) return toast("Load a video first");
+  if (!/^[a-z0-9_]+$/.test($("annotator").value.trim())) return toast("Annotator id: lowercase letters, digits, _ only");
+  const blob = new Blob([JSON.stringify(buildDoc(), null, 2) + "\n"], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = clipId + ".json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast(`Saved ${clipId}.json - put it in data/annotations/${$("annotator").value.trim()}/`);
+}
+
+/* ---------- loading ---------- */
+$("videoFile").addEventListener("change", ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  v.src = URL.createObjectURL(f);
+  clipId = slug(f.name); events = []; sel = -1; loadedExtra = {};
+  $("clipLabel").textContent = "clip_id = " + clipId;
+  restore(); clearForm(); render();
+});
+$("jsonFile").addEventListener("change", async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.events)) throw new Error("no events array");
+    events = d.events.map(({ id, ...rest }) => rest).sort((a, b) => a.start_s - b.start_s);
+    loadedExtra = { created_at: d.created_at, clip_notes: d.clip_notes };
+    if (d.annotator) $("annotator").value = d.annotator;
+    if (!clipId && d.clip_id) { clipId = d.clip_id; $("clipLabel").textContent = "clip_id = " + clipId; }
+    clearForm(); render(); toast(`Loaded ${events.length} events`);
+  } catch (err) { toast("Could not read JSON: " + err.message); }
+});
+v.addEventListener("loadedmetadata", render);
+$("annotator").addEventListener("change", () => { events = []; restore(); render(); });
+
+/* ---------- controls + hotkeys ---------- */
+const frame = () => 1 / (parseFloat($("fps").value) || 30);
+const seek = dt => { v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + dt)); };
+const toggle = () => (v.paused ? v.play() : v.pause());
+$("playBtn").onclick = toggle;
+$("speed").onchange = () => { v.playbackRate = parseFloat($("speed").value); };
+$("setStart").onclick = () => { $("start").value = fmt(v.currentTime); };
+$("setEnd").onclick = () => { $("end").value = fmt(v.currentTime); };
+$("addBtn").onclick = commit; $("clearBtn").onclick = clearForm; $("exportBtn").onclick = exportJson;
+$("delBtn").onclick = () => { if (sel >= 0) { events.splice(sel, 1); clearForm(); save(); toast("Deleted"); } };
+
+document.addEventListener("keydown", ev => {
+  const tag = (ev.target.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || tag === "select";
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") { ev.preventDefault(); exportJson(); return; }
+  if (ev.key === "Escape") { document.activeElement.blur(); clearForm(); return; }
+  if (typing && ev.key !== "Enter") return;
+  if (typing && ev.key === "Enter" && tag === "textarea") return;
+  switch (ev.key) {
+    case " ": ev.preventDefault(); toggle(); break;
+    case "ArrowLeft": ev.preventDefault(); seek(ev.shiftKey ? -5 : -1); break;
+    case "ArrowRight": ev.preventDefault(); seek(ev.shiftKey ? 5 : 1); break;
+    case ",": v.pause(); seek(-frame()); break;
+    case ".": v.pause(); seek(frame()); break;
+    case "[": $("start").value = fmt(v.currentTime); break;
+    case "]": $("end").value = fmt(v.currentTime); break;
+    case "Enter": ev.preventDefault(); commit(); break;
+    case "Delete": case "Backspace": if (sel >= 0) { events.splice(sel, 1); clearForm(); save(); toast("Deleted"); } break;
+    default:
+      if (/^[1-7]$/.test(ev.key)) { $("type").value = TYPES[+ev.key - 1]; buildAttrs(); }
+  }
+});
+window.addEventListener("beforeunload", e => { if (events.length) { e.preventDefault(); e.returnValue = ""; } });
+</script>
+</body>
+</html>

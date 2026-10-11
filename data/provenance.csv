@@ -1,0 +1,7 @@
+clip_id,filename,source_platform,source_url,author,licence,licence_url,collected_on,sha256,duration_s,fps,width,height,notes
+net_session_01,net_session_01.mp4,Pexels,https://www.pexels.com/video/dynamic-cricket-practice-session-outdoors-32928952/,Gokuldham Nar,Pexels License,,08-10-2026,5bd6ddce3a13375918e0827ad96f3172a1b2cd24bbb9075f323271b45945151b,6.139,29.97,1080,1920,
+practice_01,practice_01.mp4,Pexels,https://www.pexels.com/video/cricketer-practicing-batting-on-sunny-day-32543231/,Agha Bycric,Pexels License,,10-10-2026,fd42b4c4e244830378f11f7e4a830c096548a2e904df33f26a1d6394be420d15,7,30,1920,1080,
+practice_03,practice_03.mp4,Pexels,https://www.pexels.com/video/intense-cricket-match-in-action-on-field-36088033/,Shulabh Singh Chauhan,Pexels License,,10-10-2026,b74a2948be497f2221c83ff4eb19e97c41cb17d87553b7237324c1f2e63435e3,7.908,59.94,1080,1920,
+practice_04,practice_04.mp4,Pexels,https://www.pexels.com/video/competitive-cricket-match-on-sunny-day-36088036/,Shulabh Singh Chauhan,Pexels License,,10-10-2026,b5f8201d4aa160f867b5d63be9b9dc42cb7a179dabeb51d53cdf80de7bbd0b7c,10.677,59.94,1080,1920,
+practice_02,practice_02.mp4,Pexels,https://www.pexels.com/video/exciting-cricket-match-in-urban-playground-35550704/,Shulabh Singh Chauhan,Pexels License,,10-10-2026,b401ad4cecd263f40060638b201913e6c5ffd365d6135678bb23dda10cc2627f,6.974,59.94,1080,1920,
+match_01,match_01.mp4,Pexels,https://www.pexels.com/video/37451704/,Shulabh Singh Chauhan,Pexels License,,11-10-2026,c0f96eabd3655d977488430dd58b648c370961ce33e9d2ac82ffdb14815df9eb,8.325,59.94,1080,1920,

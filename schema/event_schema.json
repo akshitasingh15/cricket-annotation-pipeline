@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cricket-event-schema-1.0.0",
+  "title": "Cricket clip annotation",
+  "type": "object",
+  "required": ["schema_version", "clip_id", "annotator", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "clip_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "annotator": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "created_at": { "type": "string" },
+    "clip_notes": { "type": "string" },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "event": {
+      "type": "object",
+      "required": ["id", "type", "start_s", "end_s", "confidence"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "type": { "enum": ["delivery", "shot", "boundary", "wicket", "appeal", "extra", "fielding"] },
+        "start_s": { "type": "number", "minimum": 0 },
+        "end_s": { "type": "number", "minimum": 0 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "delivery" } } },
+          "then": {
+            "required": ["bowler_type", "length", "outcome"],
+            "properties": {
+              "bowler_type": { "enum": ["pace", "spin", "unknown"] },
+              "length": { "enum": ["yorker", "full", "good", "short", "unknown"] },
+              "outcome": { "enum": ["dot", "runs", "boundary", "wicket", "extra", "unknown"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "shot" } } },
+          "then": {
+            "required": ["shot_type", "contact"],
+            "properties": {
+              "shot_type": { "enum": ["drive", "cut", "pull", "hook", "sweep", "flick", "glance", "defence", "leave", "slog", "other"] },
+              "contact": { "enum": ["middled", "edged", "mistimed", "missed", "none"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "boundary" } } },
+          "then": {
+            "required": ["runs"],
+            "properties": { "runs": { "enum": [4, 6] } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "wicket" } } },
+          "then": {
+            "required": ["dismissal"],
+            "properties": {
+              "dismissal": { "enum": ["bowled", "caught", "lbw", "run_out", "stumped", "hit_wicket", "other"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "appeal" } } },
+          "then": {
+            "required": ["result"],
+            "properties": { "result": { "enum": ["out", "not_out", "review", "unknown"] } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "extra" } } },
+          "then": {
+            "required": ["extra_type"],
+            "properties": { "extra_type": { "enum": ["wide", "no_ball", "bye", "leg_bye"] } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "fielding" } } },
+          "then": {
+            "required": ["action"],
+            "properties": { "action": { "enum": ["catch", "drop", "stop", "throw", "misfield"] } }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

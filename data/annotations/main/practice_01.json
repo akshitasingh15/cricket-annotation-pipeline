@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "clip_id": "practice_01",
+  "annotator": "main",
+  "created_at": "2026-10-10T16:03:56.110Z",
+  "events": [
+    {
+      "id": 1,
+      "type": "shot",
+      "start_s": 0.02,
+      "end_s": 0.028,
+      "confidence": "high",
+      "shot_type": "slog",
+      "contact": "middled"
+    }
+  ]
+}
