@@ -66,15 +66,14 @@ Click a row to edit it; the timeline shows every event (wickets red, boundaries 
 * **Agreement before scale.** If kappa for a class is low, the guideline is ambiguous: fix the guideline, bump the schema/guideline version, re-annotate.
 * **Automation is a helper, not the truth.** Scene detection proposes boundaries; the report shows where it fails (replays, single-camera nets footage).
 
-## Scaling to 1,000 clips (the process in short)
-
+## How I would scale this to 1,000 clips
 1. **Collect** with a manifest per source batch (URL, licence, hash); dedupe by hash and perceptual hash; reject unlicensed footage.
 2. **Structure** with a fixed folder layout, a stable `clip_id`, one versioned schema, and a pinned guideline document.
 3. **Annotate** in rounds: a pilot of ~50 clips by 2+ annotators to refine the guideline; then production with a 10–15% double-annotated sample; pre-fill boundaries from scene detection to speed things up.
 4. **QA** automatically on every commit (`validate.py`) plus targeted human review of low-confidence labels and the lowest-kappa classes.
 5. **Release** with a dataset card (counts, class balance, limitations, licences), fixed train/val/test splits **by match/source** (never by clip, to avoid leakage), and a changelog.
 
-## Results (fill in from your own run)
+## Results
 
 | Metric | Value |
 |---|---|
@@ -88,7 +87,7 @@ Click a row to edit it; the timeline shows every event (wickets red, boundaries 
 
 ## Known limitations
 
-1. Small sample (5 clips, about 40 seconds), mostly stock footage.
+1. Small sample (5 clips, 39 seconds), mostly stock footage.
 2. Single annotator, so inter-annotator agreement has not been measured. The agreement tooling (scripts/agreement.py) is included and tested for use with a second annotator.
 3. Most clips are single continuous shots, so automatic scene detection finds no delivery boundaries.
 4. No wickets in the current data, so dismissal types are untested.
