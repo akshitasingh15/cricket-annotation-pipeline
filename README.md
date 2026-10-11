@@ -78,8 +78,8 @@ Click a row to edit it; the timeline shows every event (wickets red, boundaries 
 
 | Metric | Value |
 |---|---|
-| Clips / total duration | _from `DATASET_CARD.md`_ |
-| Events annotated | _from `DATASET_CARD.md`_ |
+| Clips / total duration | 5 clips/ 39s total |
+| Events annotated | 9 |
 | Event-detection F1 vs second annotator | _from `reports/agreement_report.md`_ |
 | Time-bin Cohen's kappa | _from `reports/agreement_report.md`_ |
 | Delivery boundaries matched by auto cuts | _from `reports/auto_vs_manual.md`_ |
