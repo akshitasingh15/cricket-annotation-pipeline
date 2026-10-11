@@ -3,8 +3,6 @@
 A small, end-to-end pipeline for turning cricket video clips into a **trustworthy dataset** that a CV/AI engineer can use:
 provenance tracking → versioned event schema → keyboard-driven annotation tool → automated QA → inter-annotator agreement → ML-assisted segmentation check → dataset card.
 
-> Built as a portfolio project for a Sports Data & Video Annotation role. Replace the sample numbers below with **your own measured results**.
-
 ## What's in here
 
 | Path | Purpose |
